@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeZone AI - Live Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0f172a; color: #e2e8f0; }
+        .card { background-color: #1e293b; border: 1px solid #334155; transition: all 0.2s ease-in-out; }
+        .card:hover { transform: translateY(-3px); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .kpi-icon { background-color: #334155; padding: 0.75rem; border-radius: 9999px; }
+        .violation-card { background-color: rgba(239, 68, 68, 0.1); border-left: 4px solid #ef4444; }
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Header -->
+    <header class="bg-slate-800/60 backdrop-blur-sm shadow-md sticky top-0 z-50 border-b border-slate-700">
+        <div class="max-w-screen-2xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-white flex items-center">
+                <i class="fas fa-hard-hat mr-3 text-cyan-400"></i>
+                <span>SafeZone AI</span>
+            </h1>
+            <div><span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-500/20 text-green-300 border border-green-400/50"><i class="fas fa-circle mr-2 text-xs animate-pulse"></i>Live</span></div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-screen-2xl mx-auto py-6 sm:px-6 lg:px-8">
+
+        <!-- KPI Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <!-- Workers Detected -->
+            <div class="card rounded-xl p-5 flex items-center">
+                <div class="kpi-icon mr-4"><i class="fas fa-users fa-lg text-cyan-400"></i></div>
+                <div>
+                    <p class="text-sm text-slate-400">Workers Detected</p>
+                    <p id="workers-detected" class="text-3xl font-bold">0</p>
+                </div>
+            </div>
+            <!-- Compliant -->
+            <div class="card rounded-xl p-5 flex items-center">
+                <div class="kpi-icon mr-4"><i class="fas fa-shield-halved fa-lg text-green-400"></i></div>
+                <div>
+                    <p class="text-sm text-slate-400">Compliant (Vest On)</p>
+                    <p id="compliant-workers" class="text-3xl font-bold text-green-400">0</p>
+                </div>
+            </div>
+            <!-- Non-Compliant -->
+            <div class="card rounded-xl p-5 flex items-center">
+                <div class="kpi-icon mr-4"><i class="fas fa-exclamation-triangle fa-lg text-amber-400"></i></div>
+                <div>
+                    <p class="text-sm text-slate-400">Non-Compliant</p>
+                    <p id="non-compliant-workers" class="text-3xl font-bold text-amber-400">0</p>
+                </div>
+            </div>
+             <!-- Violations Today -->
+             <div class="card rounded-xl p-5 flex items-center">
+                <div class="kpi-icon mr-4"><i class="fas fa-book-skull fa-lg text-red-400"></i></div>
+                <div>
+                    <p class="text-sm text-slate-400">Violations Today</p>
+                    <p id="violations-today" class="text-3xl font-bold text-red-400">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Grid for Video and Alerts -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Video Feed Column -->
+            <div class="lg:col-span-2">
+                 <div class="card rounded-xl p-4">
+                    <h2 class="text-xl font-semibold mb-4 text-slate-200">Live Annotated Site Feed</h2>
+                    <div class="w-full aspect-video bg-slate-900 rounded-lg flex items-center justify-center overflow-hidden">
+                        <img src="/video_feed" alt="Live video feed from the site" class="w-full h-full object-cover">
+                    </div>
+                </div>
+            </div>
+            <!-- Alerts Column -->
+            <div class="lg:col-span-1">
+                 <div class="card rounded-xl p-5">
+                    <h2 class="text-xl font-semibold mb-4 flex items-center"><i class="fas fa-bell mr-3 text-red-400 animate-pulse"></i>Recent Violation Alerts</h2>
+                    <div id="violations-list" class="space-y-4 max-h-[60vh] overflow-y-auto">
+                        <p class="text-slate-500 text-center py-4">No violations detected yet.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const workersDetectedEl = document.getElementById('workers-detected');
+            const compliantWorkersEl = document.getElementById('compliant-workers');
+            const nonCompliantWorkersEl = document.getElementById('non-compliant-workers');
+            const violationsTodayEl = document.getElementById('violations-today');
+            const violationsListEl = document.getElementById('violations-list');
+
+            async function updateDashboard() {
+                try {
+                    const response = await fetch('/dashboard_data');
+                    if (!response.ok) {
+                        console.error("Failed to fetch dashboard data.");
+                        return;
+                    }
+                    const data = await response.json();
+
+                    // Update KPI Cards
+                    workersDetectedEl.textContent = data.workers_detected || 0;
+                    compliantWorkersEl.textContent = data.compliant_workers || 0;
+                    nonCompliantWorkersEl.textContent = data.non_compliant_workers || 0;
+                    violationsTodayEl.textContent = data.violations_today || 0;
+                    
+                    // Update Violations List
+                    violationsListEl.innerHTML = ''; // Clear previous list
+                    if (data.recent_violations && data.recent_violations.length > 0) {
+                        data.recent_violations.forEach(v => {
+                            const violationDate = new Date(v.timestamp);
+                            const timeString = violationDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+                            const card = `
+                                <div class="violation-card rounded-lg p-3 flex items-start space-x-3 transition-all hover:bg-red-500/20">
+                                    <img src="${v.snapshot_path}" alt="Violation Snapshot" class="w-16 h-16 rounded-md object-cover border-2 border-red-500/50">
+                                    <div>
+                                        <p class="font-semibold text-red-400">Vest Violation Detected</p>
+                                        <p class="text-sm text-slate-400">${timeString}</p>
+                                    </div>
+                                </div>
+                            `;
+                            violationsListEl.innerHTML += card;
+                        });
+                    } else {
+                        violationsListEl.innerHTML = '<p class="text-slate-500 text-center py-4">No recent violations.</p>';
+                    }
+
+                } catch (error) {
+                    console.error("Error updating dashboard:", error);
+                }
+            }
+
+            // Update every 2 seconds
+            setInterval(updateDashboard, 2000);
+            // Initial update
+            updateDashboard();
+        });
+    </script>
+
+</body>
+</html>
+
+
